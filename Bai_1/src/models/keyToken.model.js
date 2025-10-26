@@ -21,7 +21,7 @@ const keyTokenModel = new Schema(
   },
   {
     timeseries: true,
-    collation: COLLECTION_NAME,
+    collection: COLLECTION_NAME,
   }
 );
 

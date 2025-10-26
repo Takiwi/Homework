@@ -19,8 +19,8 @@ class ErrorResponse extends Error {
 
 class BadRequestError extends ErrorResponse {
   constructor(
-    message = ReasonStatusCode.FORBIDDEN,
-    status = StatusCode.FORBIDDEN
+    message = ReasonPhrases.FORBIDDEN,
+    status = StatusCodes.FORBIDDEN
   ) {
     super(message, status);
   }

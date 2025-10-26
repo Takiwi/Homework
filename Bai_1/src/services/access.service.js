@@ -19,11 +19,32 @@ class AccessService {
 
     if (!match) throw new AuthFailureError("Authentication error!");
 
+    // revoked token
+    const foundRefreshToken = await KeyTokenService.findRefreshTokenById(
+      foundUser._id
+    );
+
+    if (!foundRefreshToken) throw new AuthFailureError("Authentication error!");
+
+    // create new refresh token and access token
+    const tokens = await createTokenPair({
+      userId: foundUser._id,
+      email,
+    });
+
+    // update and save refresh token
+    const newKey = await KeyTokenService.revokedToken(
+      foundUser._id,
+      foundRefreshToken.refreshToken,
+      tokens.refreshToken
+    );
+
     return {
       user: getInfoData({
         fields: ["_id", "username", "email"],
         object: foundUser,
       }),
+      tokens,
     };
   };
 
