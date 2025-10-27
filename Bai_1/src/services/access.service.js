@@ -1,14 +1,77 @@
 const userModel = require("../models/user.model");
 const bcrypt = require("bcrypt");
 const { getInfoData } = require("../utils/index");
-const { BadRequestError, AuthFailureError } = require("../core/error.response");
+const {
+  BadRequestError,
+  AuthFailureError,
+  ForbiddenError,
+} = require("../core/error.response");
 const { createTokenPair } = require("../auth/authUtils");
+const { verifyToken } = require("../auth/authUtils");
 
 // service
 const KeyTokenService = require("../services/keyToken.service");
+const UserService = require("../services/user.service");
 
 class AccessService {
-  static login = async ({ email, password, refreshToken = null }) => {
+  // handler refresh token
+  static handlerRefreshToken = async (refreshToken) => {
+    // Check refresh token is used???
+    const foundToken = await KeyTokenService.findRefreshTokenUsed(refreshToken);
+
+    // If the 'refresh token' is used again, then delete 'refresh token' in database and re-login
+    if (foundToken) {
+      await KeyTokenService.deleteKeyById(foundToken._id);
+      throw new ForbiddenError("Something wrong happened!! please re-login");
+    }
+
+    // check refresh token
+    const holderToken = await KeyTokenService.findRefreshToken(refreshToken);
+
+    if (!holderToken) throw new AuthFailureError("User not registered! 1");
+
+    // verify token
+    const { userId, email } = await verifyToken(refreshToken);
+
+    // check user
+    const foundUser = await UserService.findUserByEmail(email);
+    if (!foundUser) throw new AuthFailureError("User not registered! 2");
+
+    // create new tokens
+    const tokens = await createTokenPair({
+      userId: foundUser._id,
+      email,
+    });
+
+    // update tokens
+    await KeyTokenService.revokedToken(
+      foundUser._id,
+      holderToken.refreshToken,
+      tokens.refreshToken
+    );
+
+    return {
+      user: { userId, email },
+      tokens,
+    };
+  };
+
+  // logout
+  static logout = async (payload) => {
+    // take refresh token
+    const foundRefreshToken = await KeyTokenService.findRefreshTokenById(
+      payload.userId
+    );
+
+    // update and save refresh token
+    await KeyTokenService.revokedToken(
+      payload.userId,
+      foundRefreshToken.refreshToken
+    );
+  };
+
+  // login
+  static login = async ({ email, password }) => {
     // check email??
     const foundUser = await userModel.findOne({ email }).lean();
 
@@ -48,6 +111,7 @@ class AccessService {
     };
   };
 
+  // register
   static register = async ({ name, email, password }) => {
     // Check email is exist???
     const isEmailExist = await userModel.findOne({ email }).lean();

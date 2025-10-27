@@ -1,5 +1,5 @@
 const keyTokenModel = require("../models/keyToken.model");
-const { ObjectId, Types } = require("mongoose");
+const { Types } = require("mongoose");
 
 class KeyTokenService {
   static createKeyToken = async ({ userId, refreshToken }) => {
@@ -16,21 +16,40 @@ class KeyTokenService {
     return tokens ? tokens : null;
   };
 
-  static revokedToken = async (userId, oldRefreshToken, newRefreshToken) => {
+  static revokedToken = async (
+    userId,
+    oldRefreshToken,
+    newRefreshToken = null
+  ) => {
+    const updateData = {
+      refreshTokenUsed: oldRefreshToken,
+    };
+
+    if (newRefreshToken) {
+      updateData.$push = { refreshTokenUsed: oldRefreshToken };
+    }
     return await keyTokenModel.updateOne({
       user: userId,
       refreshToken: newRefreshToken,
-      $push: {
-        refreshTokenUsed: oldRefreshToken,
-      },
+      updateData,
     });
+  };
+
+  static findRefreshTokenUsed = async (refreshToken) => {
+    return await keyTokenModel
+      .findOne({ refreshTokenUsed: refreshToken })
+      .lean();
   };
 
   static findRefreshTokenById = async (userId) => {
     return await keyTokenModel.findOne({ user: userId }).lean();
   };
 
-  static deleteRefreshToken = async (userId) => {
+  static findRefreshToken = async (refreshToken) => {
+    return await keyTokenModel.findOne({ refreshToken: refreshToken }).lean();
+  };
+
+  static deleteKeyById = async (userId) => {
     return await keyTokenModel.deleteOne({ user: userId });
   };
 }

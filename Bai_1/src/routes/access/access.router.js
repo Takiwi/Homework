@@ -6,10 +6,16 @@ const TokenMiddleware = require("../../middlewares/verifyToken.middleware");
 // register
 router.post("/register", accessController.register);
 
+// login
+router.post("/login", accessController.login);
+
 // check JWT
 router.use(TokenMiddleware.verifyAccessToken);
 
-// login
-router.post("/login", accessController.login);
+// logout
+router.post("/logout", accessController.logout);
+
+// refresh token
+router.post("/handlerRefreshToken", accessController.handlerRefreshToken);
 
 module.exports = router;
